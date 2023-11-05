@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import './App.css';
 import { Button, Checkbox, Grid, Typography } from '@mui/material';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import {CSS} from '@dnd-kit/utilities';
 
 function App() {
  const data = [
@@ -76,11 +79,46 @@ const handleCheckbox =(id,e)=>{
     })
     setImages(modifiedImage)
 }
-console.log(count)
+// console.log(count)
 
 const handleDelete=()=>{
     const newArray = images.filter((image)=>!image.checked===true)
     setImages(newArray);
+}
+
+// Drag and Drop component
+
+const SortableImage = ({image,index})=>{
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition
+    }=useSortable({id: image.id})
+
+    const style = {
+        transition,
+        transform:CSS.Transform.toString(transform),
+    }
+
+    return(
+        <div ref={setNodeRef} {...attributes}{...listeners} style={style}>
+            <img src={image.url} style={{border:'1px solid cadetblue',borderRadius:'10px',width:index>0?'150px':'300px',height:index>0?'150px':'300px'}} alt='sortable img'/>                
+        </div>
+    )
+}
+
+const onDragEnd =(e)=>{
+    const {active,over}=e
+    if(active.id===over.id){
+        return
+    }
+    setImages((images)=>{
+        const oldIndex = images.findIndex((img)=>img.id===active.id)
+        const newIndex = images.findIndex((img)=>img.id===over.id)
+        return arrayMove(images,oldIndex,newIndex)
+    })
 }
  console.log(images);
   return (
@@ -98,34 +136,29 @@ const handleDelete=()=>{
          </Button>   
         </div>
     
-    <Grid className='App' container spacing={2} sx={{marginY:'2%'}}>
-
+            <Grid className='App' container spacing={2} sx={{marginY:'2%'}}>
+                <Grid item container spacing={2} sx={{marginX:'10%'}}>
+                <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                    <SortableContext items={images} strategy={verticalListSortingStrategy}>
+                    {
+                    images.map((image,index)=><Grid key={image.id} item>
+                        {/* <div style={{backgroundColor:'lightgray',position:'relative'}}> */}
+                            <Checkbox 
+                    checked={image.checked} 
+                    onChange={(e)=>handleCheckbox(image.id,e)} 
+                    sx={{position:'absolute',marginLeft:'30px'}}/> 
+                        {/* </div> */}
+                   
+                    <SortableImage key={image.id} image={image} index={index}/>
+                    </Grid>
+                    )
+                    }
+                    </SortableContext>
+                </DndContext>
+                </Grid>
         
-        <Grid item>
-            <Checkbox checked={images[0].checked} onChange={(e)=>handleCheckbox(images[0].id,e)} sx={{position:'absolute'}}/>
-            <img src={images[0].url} style={{width:'300px',height:'300px',border:'1px solid cadetblue',borderRadius:'10px'}} alt='feature img'/>
-
-        </Grid>
-        <Grid item container spacing={2} sx={{marginX:'10%'}}>
-            {
-               images.map((image,index)=><Grid key={image.id} item sx={{width:'150px',height:'150px'}}>{
-
-                index!==0&&(
-                    <>
-                    <Checkbox checked={image.checked} onChange={(e)=>handleCheckbox(image.id,e)} sx={{position:'absolute'}}/>
-                    <img src={image.url} style={{border:'1px solid cadetblue',borderRadius:'10px'}} alt='sortable img'/>
-                    
-                    </>
-                )
-                
-               }
-               </Grid>
-               )
-            }
-
-        </Grid>
-   
-  </Grid>
+            </Grid>
+        
   </div>
   );
 }
